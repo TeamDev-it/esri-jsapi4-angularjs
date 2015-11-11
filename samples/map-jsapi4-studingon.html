@@ -1,0 +1,65 @@
+﻿<html>
+<head>
+  <title>Base Map Sample</title>
+  <!--<link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">-->
+  <!--<script src="http://js.arcgis.com/3.14/"></script>-->
+
+  <link href="../css/teamdev.esri.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.0beta1/esri/css/esri.css">
+
+  <script src="https://js.arcgis.com/4.0beta1/"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
+  <script src="../js/teamdev.esri.4.porting.js"></script>
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .map {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .selector {
+      position: absolute;
+      top:20px;
+      right:20px;
+      z-index:30;
+    }
+
+    #search {
+      position: absolute;
+      top: 10px;
+      left: 60px;
+      z-index: 20;
+    }
+  </style>
+</head>
+<!-- REMEMBER : Its an AngularJS Extension, so you need to declare an ng-app or you need to use our default app "MapApp"-->
+<body ng-app="MapApp" ng-init="basemap = 'gray'">
+  <select ng-model="basemap" class="selector">
+    <option value="osm">OSM</option>
+    <option value="topo">Topo</option>
+    <option value="gray">Gray</option>
+  </select>
+  <scene-view container="map">
+    <esri-map basemap="basemap"></esri-map>
+  </scene-view>
+
+  <!--<esri-map map-id="map" view-mode="3D"
+            base-map="osm" zoom="6" map-center="[-96.541, 38.34]" auto-resize="true">
+    <search target="search"></search>
+    <feature-layer url="http://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer/2" mode="MODE_SNAPSHOT" layer-id="layer1" out-fields="*">
+    </feature-layer>
+    <graphics-layer layer-id="g">
+
+
+    </graphics-layer>
+  </esri-map>-->
+  <div id="search"></div>
+</body>
+</html>
