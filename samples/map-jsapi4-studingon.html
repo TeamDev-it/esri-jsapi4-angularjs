@@ -26,9 +26,9 @@
 
     .selector {
       position: absolute;
-      top:20px;
-      right:20px;
-      z-index:30;
+      top: 20px;
+      right: 20px;
+      z-index: 30;
     }
 
     #search {
@@ -47,7 +47,15 @@
     <option value="gray">Gray</option>
   </select>
   <scene-view container="map">
-    <esri-map basemap="basemap"></esri-map>
+    <esri-map basemap="basemap" map-id="mymap">
+      <search search-id="search"></search>
+      <feature-layer url="'http://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer/2'">
+
+      </feature-layer>
+      <graphics-layer>
+
+      </graphics-layer>
+    </esri-map>
   </scene-view>
 
   <!--<esri-map map-id="map" view-mode="3D"

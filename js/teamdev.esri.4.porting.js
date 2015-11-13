@@ -1,7 +1,11 @@
 ﻿/* global O */
 /* global angular */
-angular.module("MapApp", ["teamdev.esri"]).controller("defaultController", function () { });
-angular.module("teamdev.esri", [])
+angular.module("MapApp", ["__td_registry.esri"]).controller("defaultController", function () { });
+angular.module("__td_registry.esri", [])
+
+/// ---------------------------------------------------------------------------------
+/// Helper object to bing dojo-properties to angularjs' scope
+/// ---------------------------------------------------------------------------------
 .factory("propertyConnector", function () {
   return function (dojoObject, angularObject, propertyname) {
     var _this = this;
@@ -27,19 +31,46 @@ angular.module("teamdev.esri", [])
     }
   }
 })
+
+/// Utility to create an options object base on scope definition
+.factory("connector", ["propertyConnector", function (propertyConnector) {
+  return {
+    scopeToOptions: function (scope) {
+      var result = new Object();
+      if (scope !== undefined && scope) {
+        for (var i in scope) {
+          if (i.indexOf('$') < 0 && i.indexOf('on') != 0)
+            if (scope[i] && !angular.isFunction(scope[i]))
+              result[i] = scope[i];
+        }
+      }
+      return result;
+    },
+    connectObjectToScope: function (object, scope) {
+      var result = [];
+      if (scope !== undefined && scope) {
+        for (var i in scope) {
+          if (i.indexOf('$') < 0 && i.indexOf('on') != 0)
+            result.push(new propertyConnector(object, scope, i))
+        }
+      }
+      return result;
+    }
+  };
+}])
 .factory("esriRegistry", function ($window) {
-  if (typeof $window.teamdev == 'undefined')
-    $window.teamdev = { esri_registry: {} };
+  if (typeof $window.__td_registry == 'undefined')
+    $window.__td_registry = { esri_registry: {} };
 
   return {
     set: function (name, value) {
-      $window.teamdev.esri_registry[name] = value;
+      $window.__td_registry.esri_registry[name] = value;
     },
     get: function (name) {
-      return $window.teamdev.esri_registry[name];
+      return $window.__td_registry.esri_registry[name];
     },
     remove: function (name) {
-      $window.teamdev.esri_registry[name] = null;
+      $window.__td_registry.esri_registry[name] = null;
     }
   };
 })
@@ -154,7 +185,7 @@ angular.module("teamdev.esri", [])
 /// ---------------------------------------------------------------------------------
 /// Views Definitions 
 /// ---------------------------------------------------------------------------------
-.directive("mapView", ["$q", "esriRegistry", "propertyConnector", function ($q, esriRegistry, propertyConnector) {
+.directive("mapView", ["$q", "esriRegistry", "connector", function ($q, esriRegistry, connector) {
 
   function linker(scope, element, attr) {
     scope.prepared = $q.defer();
@@ -167,17 +198,8 @@ angular.module("teamdev.esri", [])
         center: attr.center || [12, 42]
       }).then(function (v) {
         scope.view = v;
-        scope.connectors = [];
-        scope.connectors.push(new propertyConnector(scope.view, scope, "animation"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "center"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "constraints"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "extent"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "height"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "interacting"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "padding"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "animation"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "width"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "zoom"));
+        // Binds scope properties to view properties
+        scope.connectors = connector.connectObjectToScope(scope.view, scope);
         scope.prepared.resolve();
       });
     });
@@ -186,6 +208,10 @@ angular.module("teamdev.esri", [])
       if (scope.onReady()) scope.onReady()(scope.map);
       if (scope.onClick()) scope.view.onClick(function (a, b, c) { scope.onClick()(a, b, c); })
     })
+
+    scope.$on("$destroy", function () {
+
+    });
   };
 
   return {
@@ -208,6 +234,12 @@ angular.module("teamdev.esri", [])
       this.addMap = function (m) {
         $scope.map = m;
       }
+      this.getView = function (action) {
+        if (action)
+          if ($scope.isObjectReady.then(function () {
+            action($scope.view);
+          }));
+      }
     }],
     compile: function ($element, $attrs) {
       $element.append('<div id=' + $attrs.container + '></div>');
@@ -217,7 +249,7 @@ angular.module("teamdev.esri", [])
     }
   }
 }])
-.directive("sceneView", ["$q", "esriRegistry", "propertyConnector", function ($q, esriRegistry, propertyConnector) {
+.directive("sceneView", ["$q", "esriRegistry", "connector", function ($q, esriRegistry, connector) {
   function linker(scope, element, attr) {
     scope.prepared = $q.defer();
     scope.isObjectReady = scope.prepared.promise;
@@ -229,25 +261,8 @@ angular.module("teamdev.esri", [])
         center: attr.center || [12, 42]
       }).then(function (v) {
         scope.view = v;
-        scope.connectors = [];
-        scope.connectors.push(new propertyConnector(scope.view, scope, "animation"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "camera"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "center"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "constraints"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "environment"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "extent"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "height"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "heightResizeMode"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "interacting"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "padding"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "position"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "scale"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "stationary"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "updating"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "viewpoint"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "width"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "widthResizeMode"));
-        scope.connectors.push(new propertyConnector(scope.view, scope, "zoom"));
+        // Binds scope properties to view properties
+        scope.connectors = connector.connectObjectToScope(scope.view, scope);
         scope.prepared.resolve();
       });
     });
@@ -255,7 +270,10 @@ angular.module("teamdev.esri", [])
       if (scope.viewId) esriRegistry.set(scope.viewId, scope.view);
       if (scope.onReady()) scope.onReady()(scope.map);
       if (scope.onClick()) scope.view.onClick(function (a, b, c) { scope.onClick()(a, b, c); })
-    })
+    });
+    scope.$on("$destroy", function () {
+
+    });
   };
 
   return {
@@ -288,6 +306,12 @@ angular.module("teamdev.esri", [])
       this.addMap = function (m) {
         $scope.map = m;
       }
+      this.getView = function (action) {
+        if (action)
+          if ($scope.isObjectReady.then(function () {
+            action($scope.view);
+          }));
+      }
     }],
     compile: function ($element, $attrs) {
       $element.append('<div id=' + $attrs.container + '></div>');
@@ -299,6 +323,9 @@ angular.module("teamdev.esri", [])
   }
 }])
 
+/// ---------------------------------------------------------------------------------
+/// Map definition
+/// ---------------------------------------------------------------------------------
 .directive("esriMap", ["$q", "esriRegistry", "propertyConnector", function ($q, esriRegistry, propertyConnector) {
 
   function linker(scope, element, attr, parents) {
@@ -320,7 +347,10 @@ angular.module("teamdev.esri", [])
     scope.isObjectReady.then(function () {
       if (scope.mapId) esriRegistry.set(scope.mapId, scope.map);
       if (scope.onMapReady()) scope.onMapReady()(scope.map);
-    })
+    });
+    scope.$on("$destroy", function () {
+
+    });
   };
 
   return {
@@ -337,139 +367,156 @@ angular.module("teamdev.esri", [])
         $scope.isObjectReady.then(function () {
           $scope.map.add(l);
         });
+        return $scope.isObjectReady;
       };
     }]
   }
 }])
 
-.directive("featureLayer", function ($q, esriRegistry, $timeout) {
+/// ---------------------------------------------------------------------------------
+/// Widgets Definition
+/// ---------------------------------------------------------------------------------
+.directive("search", ["$q", "esriRegistry", "connector", function ($q, esriRegistry, connector) {
+
+  function linker(scope, element, attrs, parents) {
+    var ready = $q.defer();
+    scope.isObjectReady = ready.promise;
+
+    require(["esri/widgets/Search"], function (Search) {
+      var parent = parents[0] || parents[1];
+      parent.getView(function (v) {
+
+        scope.this_tool = new Search({ view: v }, scope.target || scope.searchId);
+        // Binds scope properties to search properties
+        scope.connectors = connector.connectObjectToScope(scope.this_tool, scope);
+        scope.this_tool.startup();
+
+        if (scope.searchId) {
+          scope.this_tool._id = scope.searchId;
+          esriRegistry.set(scope.searchId, scope.this_tool);
+        }
+        ready.resolve();
+      });
+      scope.$on("$destroy", function () {
+        scope.isObjectReady.then(function () {
+          if (scope.searchId) esriRegistry.remove(scope.searchId);
+          scope.this_tool.destroy();
+        });
+      });
+    });
+  }
+
+  return {
+    restrict: "E",
+    require: ["?^mapView", "?^sceneView"],
+    scope: {
+      searchId: "@",
+      target: "@",
+
+      addLayersFromMap: "=",
+      autoNavigate: "=",
+      autoSelect: "=",
+      enableButtonMode: "=",
+      enableHighlight: "=",
+      enableLabel: "=",
+      enablePopup: "=",
+      enableSourcesMenu: "=",
+      enableSuggestions: "=",
+      enableSuggestionsMenu: "=",
+      expanded: "=",
+      graphicsLayer: "=",
+      readonlyhighlightGraphic: "=",
+      readonlylabelGraphic: "=",
+      labelSymbol: "=",
+      locationToAddressDistance: "=",
+      maxLength: "=",
+      maxResults: "=",
+      maxSuggestions: "=",
+      minCharacters: "=",
+      searchResults: "=",
+      showPopupOnSelect: "=",
+      sources: "=",
+      suggestionDelay: "=",
+      suggestResults: "=",
+      value: "=",
+      visible: "=",
+      zoomScale: "="
+
+    },
+    compile: function ($element, $attrs) {
+      if (!$attrs.target)
+        $element.append('<div id=' + $attrs.searchId + '></div>');
+      return {
+        post: linker
+      };
+    }
+  };
+}])
+
+/// ---------------------------------------------------------------------------------
+/// Layers Definition
+/// ---------------------------------------------------------------------------------
+.directive("featureLayer", ["$q", "esriRegistry", "$timeout", "connector", function ($q, esriRegistry, $timeout, connector) {
   return {
     restrict: "E",
     require: "^esriMap",
     replace: true,
     scope: {
-      id: "@",
       layerId: "@",
-      url: "@",
+
+      attributionDataUrl: "=",
+      blendMode: "=",
+      copyright: "=",
+      elevationInfo: "=",
+      fullExtent: "=",
+      hasAttachments: "=",
+      hasAttributionData: "=",
+      hasM: "=",
+      hasZ: "=",
+      initialExtent: "=",
+      listMode: "=",
+      maxScale: "=",
+      minScale: "=",
+      opacity: "=",
+      refreshInterval: "=",
+      renderer: "=",
+      returnM: "=",
+      returnZ: "=",
+      showAttribution: "=",
+      showLegend: "=",
+      spatialReference: "=",
+      url: "=",
       visible: "=",
-      onClick: "&",
-      onDblClick: "&",
-      outFields: "@",
-      zoomToSelection: "@",
-      mode: "@",
+
       onReady: "&",
-      index: "@",
-      showInfoWindowOnClick: "=",
-      onBeforeApplyEdits: "&",
-      onEditsComplete: "&",
-      onGraphicAdd: "&",
-      onGraphicRemove: "&",
-      editable: "@",
     },
     link: {
       pre: function (scope, element, attrs, esriMap) {
         var ready = $q.defer();
         scope.isObjectReady = ready.promise;
         require(["esri/layers/FeatureLayer", "esri/identity/IdentityManager"], function (FeatureLayer, esriIm) {
-          console.log(esriIm);
+          var opts = connector.scopeToOptions(scope);
+          scope.this_layer = new FeatureLayer(opts);
 
-          function evaluateOptions(scope) {
-            var options = {};
-
-            if (scope.mode)
-              switch (scope.mode) {
-                case "MODE_SNAPSHOT": options.mode = FeatureLayer.MODE_SNAPSHOT; break;
-                case "MODE_ONDEMAND": options.mode = FeatureLayer.MODE_ONDEMAND; break;
-                case "MODE_SELECTION": options.mode = FeatureLayer.MODE_SELECTION; break;
-                case "MODE_AUTO": options.mode = FeatureLayer.MODE_AUTO; break;
-
-                case "POPUP_HTML_TEXT": options.mode = FeatureLayer.POPUP_HTML_TEXT; break;
-                case "POPUP_NONE": options.mode = FeatureLayer.POPUP_NONE; break;
-                case "POPUP_URL": options.mode = FeatureLayer.POPUP_URL; break;
-                case "SELECTION_ADD": options.mode = FeatureLayer.SELECTION_ADD; break;
-                case "SELECTION_NEW": options.mode = FeatureLayer.SELECTION_NEW; break;
-                case "SELECTION_SUBTRACT": options.mode = FeatureLayer.SELECTION_SUBTRACT; break;
-              }
-
-            if (scope.outFields)
-              if (angular.isArray(scope.outFields))
-                options.outFields = scope.outFields;
-              else
-                options.outFields = scope.outFields.split(",");
-            return options;
-          }
-
-          if (attrs.url) {
-            var opts = evaluateOptions(scope);
-            opts.url = attrs.url;
-            scope.this_layer = new FeatureLayer(opts);
-          }
-          else
-            scope.this_layer = new FeatureLayer({ featureSet: null, layerDefinition: { "geometryType": "esriGeometryPolygon", "fields": [] } }, evaluateOptions(scope));
+          scope.connectors = connector.connectObjectToScope(scope.this_layer, scope);
 
           esriMap.addLayer(scope.this_layer, scope.index).then(function () {
             if (scope.this_layer.loaded)
               ready.resolve();
             else
-              scope.this_layer.on("load", function (r) {
+              scope.this_layer.watch("loaded", function (n, o, v) {
                 ready.resolve();
               });
           });
 
           if (scope.layerId || scope.id) {
-            scope.this_layer._layer_id = scope.layerId || scope.id;
+            scope.this_layer._layer_id = scope.layerId;
             esriRegistry.set(scope.layerId || scope.id, scope.this_layer);
           }
 
           scope.isObjectReady.then(function () {
-
-            if (scope.editable === "true")
-              try { scope.this_layer.setEditable(true); } catch (e) {
-                console.log("Setting Editing to Layer failed: " + e);
-              }
-
             if (scope.onReady()) scope.onReady()(scope.this_layer);
           });
-
-          scope.this_layer.on("click", function (r) {
-            if (!scope.$$phase && !scope.$root.$$phase) {
-              scope.$apply(function () {
-                if (scope.onClick()) scope.onClick()(r);
-              });
-            } else {
-              if (scope.onClick()) scope.onClick()(r);
-            }
-
-            esriMap.getMap(function (rr) {
-              rr.infoWindow.hide();
-              rr.infoWindow.clearFeatures();
-              rr.infoWindow.setFeatures([r.graphic]);
-              if (scope.showInfoWindowOnClick == true)
-                $timeout(function () { rr.infoWindow.show(r.mapPoint); });
-            });
-          });
-
-          if (scope.onDblClick()) scope.this_layer.on("dbl-click", function (r) { scope.onDblClick()(r); });
-          if (scope.onBeforeApplyEdits()) scope.this_layer.on("before-apply-edits", function (r) { scope.onBeforeApplyEdits()(r); });
-          if (scope.onEditsComplete()) scope.this_layer.on("edits-complete", function (r) { scope.onEditsComplete()(r); });
-          if (scope.onGraphicAdd()) scope.this_layer.on("graphic-add", function (r) { scope.onGraphicAdd()(r); });
-          if (scope.onGraphicRemove()) scope.this_layer.on("graphic-remove", function (r) { scope.onGraphicRemove()(r); });
-
-          // UNSUPPORTED IN Beta1
-          //scope.this_layer.on("selection-complete", function () {
-          //  if (scope.zoomToSelection == true) {
-          //    scope.isObjectReady.then(function () {
-          //      var extent = GraphicsUtils.graphicsExtent(scope.this_layer.getSelectedFeatures());
-          //      esriMap.getMap(function (m) { m.setExtent(extent); });
-          //    });
-          //  }
-          //});
-
-        });
-        if (scope.visible !== 'undefined') scope.$watch("visible", function (n, o) {
-          if (scope.this_layer && n !== o) {
-            scope.this_layer.setVisibility(n);
-          }
         });
 
         scope.$on("$destroy", function () {
@@ -481,7 +528,7 @@ angular.module("teamdev.esri", [])
         });
       }
     },
-    controller: function ($scope) {
+    controller: ["$scope", function ($scope) {
       this.add = function (point) {
         $scope.isObjectReady.then(function () {
           $scope.this_layer.add(point);
@@ -514,20 +561,38 @@ angular.module("teamdev.esri", [])
           });
         });
       };
-    }
+    }]
   };
-})
-.directive("graphicsLayer", function ($q, esriRegistry) {
+}])
+.directive("graphicsLayer", ["$q", "esriRegistry", "$timeout", "connector", function ($q, esriRegistry, $timeout, connector) {
 
   return {
     restrict: "E",
     require: "^esriMap",
     scope: {
-      id: "@",
       layerId: "@",
+
+      attributionDataUrl: "=",
+      blendMode: "=",
+      copyright: "=",
+      elevationInfo: "=",
+      fullExtent: "=",
+      graphics: "=",
+      hasAttributionData: "=",
+      initialExtent: "=",
+      listMode: "=",
+      maxScale: "=",
+      minScale: "=",
+      opacity: "=",
+      refreshInterval: "=",
+      renderer: "=",
+      showAttribution: "=",
+      showLegend: "=",
+      spatialReference: "=",
+      url: "=",
       visible: "=",
-      onClick: "&",
-      index: "@"
+
+      onReady: "&",
     },
     link: {
       pre: function (scope, element, attrs, esriMap) {
@@ -535,7 +600,12 @@ angular.module("teamdev.esri", [])
         scope.isObjectReady = ready.promise;
 
         require(["esri/layers/GraphicsLayer"], function (GraphicsLayer) {
-          scope.this_layer = new GraphicsLayer();
+
+          var opts = connector.scopeToOptions(scope);
+          scope.this_layer = new GraphicsLayer(opts);
+
+          scope.connectors = connector.connectObjectToScope(scope.this_layer, scope);
+
           esriMap.addLayer(scope.this_layer, scope.index);
           if (scope.layerId || scope.id) {
             scope.this_layer._layer_id = scope.layerId || scope.id;
@@ -543,26 +613,17 @@ angular.module("teamdev.esri", [])
           }
           ready.resolve();
 
-          scope.this_layer.on("click", function (r) {
-            if (!scope.$$phase && !scope.$root.$$phase) scope.$apply(function () {
-              if (scope.onClick()) scope.onClick()(r);
-            });
-          });
-        });
-        if (scope.visible) scope.$watch("visible", function (n, o) {
-          if (scope.this_layer && n !== o) {
-            scope.this_layer.setVisibility(n);
-          }
+
         });
         scope.$on("$destroy", function () {
           scope.isObjectReady.then(function () {
-            if ((scope.layerId || scope.id) && esriRegistry.get(scope.layerId || scope.id) === scope.this_layer) esriRegistry.remove(scope.layerId || scope.id);
+            if ((scope.layerId) && esriRegistry.get(scope.layerId) === scope.this_layer) esriRegistry.remove(scope.layerId);
             esriMap.removeLayer(scope.this_layer);
           });
         });
       }
     },
-    controller: function ($scope) {
+    controller: ["$scope", function ($scope) {
       this.add = function (point) {
         $scope.isObjectReady.then(function () {
           $scope.this_layer.add(point);
@@ -594,46 +655,126 @@ angular.module("teamdev.esri", [])
         if (action)
           $scope.isObjectReady.then(function () { action($scope.this_layer) });
       };
-    }
+    }]
   };
-})
+}])
 
-.directive("search", function ($q, esriRegistry) {
+/// ---------------------------------------------------------------------------------
+/// Graphics Definition
+/// ---------------------------------------------------------------------------------
+.directive("graphic", ["$q", "esriRegistry", "connector", function ($q, esriRegistry, connector) {
   return {
     restrict: "E",
-    require: "^esriMap",
+    require: ["?^graphicsLayer"],
     scope: {
-      id: "@",
-      target: "@"
+      attributes: "=",
+      visible: "=",
     },
     link: {
-      pre: function (scope, element, attrs, esriMap) {
+      pre: function (scope, element, attrs, parents) {
+        var parent = parents[0];
         var ready = $q.defer();
         scope.isObjectReady = ready.promise;
+        require(["esri/Graphic"], function (Graphic) {
+          var opts = connector.scopeToOptions(scope);
+          scope.this_object = new Graphic(opts);
 
-        require(["esri/widgets/Search"], function (Search) {
-          esriMap.getView(function (v) {
+          scope.connectors = connector.connectObjectToScope(scope.this_object, scope);
 
-            scope.this_tool = new Search({ view: v }, scope.target);
-            scope.this_tool.startup();
-
-            if (scope.id) {
-              scope.this_tool._id = scope.id;
-              esriRegistry.set(scope.id, scope.this_tool);
-            }
-            ready.resolve();
-          });
-          scope.$on("$destroy", function () {
-            scope.isObjectReady.then(function () {
-              if (scope.id) esriRegistry.remove(scope.id);
-              scope.this_tool.destroy();
-            });
-          });
+          parent.add(scope.this_object);
+          ready.resolve();
         });
+        scope.$on("$destroy", function () { scope.isObjectReady.then(function () { parent.remove(scope.this_object); }) });
       }
+    },
+    controller: ["$scope", function ($scope) {
+      this.add = function (g) {
+        $scope.isObjectReady.then(function () { $scope.this_object.geometry = g; })
+      }
+      this.addSymbol = function (s) {
+        $scope.isObjectReady.then(function () { $scope.this_object.symbol = s; })
+      }
+    }]
+  }
+}])
+
+/// ---------------------------------------------------------------------------------
+/// Geometries Definition
+/// ---------------------------------------------------------------------------------
+.directive("point", ["$q", function ($q) {
+  return {
+    restrict: "E",
+    require: ["^graphic"],
+    scope: {
+      cache: "=",
+      extent: "=",
+      hasM: "=",
+      hasZ: "=",
+      latitude: "=",
+      longitude: "=",
+      m: "=",
+      spatialReference: "=",
+      x: "=",
+      y: "=",
+      z: "=",
+    },
+    link: {
+      pre: function (scope, element, attrs, parents) {
+        var parent = parents[0] || parents[1];
+        var ready = $q.defer();
+        scope.isObjectReady = ready.promise;
+        require(["esri/geometry/Point"], function (Point) {
+
+          var opts = connector.scopeToOptions(scope);
+          scope.this_object = new Point(opts);
+
+          scope.connectors = connector.connectObjectToScope(scope.this_object, scope);
+
+          parent.add(scope.this_object);
+          ready.resolve();
+        });
+        scope.$on("$destroy", function () { scope.isObjectReady.then(function () { parent.remove(scope.this_object); }) });
+      }
+    },
+  };
+}])
+
+/// ---------------------------------------------------------------------------------
+/// Symbols Definition
+/// ---------------------------------------------------------------------------------
+.directive("pictureMarkerSymbol", ["$q", function ($q) {
+  return {
+    restrict: "E",
+    scope: {
+      angle: "=",
+      color: "=",
+      height: "=",
+      size: "=",
+      url: "=",
+      width: "=",
+      xoffset: "=",
+      yoffset: "=",
+    },
+    require: ["?^graphic", "?^graphicsLayer", "?^featureLayer"],
+    link: function (scope, element, attr, parents) {
+      var parent = parents[0] || parents[1] || parents[2];
+      var ready = $q.defer();
+      scope.isObjectReady = ready.promise;
+      require(["esri/symbols/PictureMarkerSymbol"], function (PictureMarkerSymbol) {
+
+        var opts = connector.scopeToOptions(scope);
+        scope.this_object = new Point(opts);
+
+        scope.connectors = connector.connectObjectToScope(scope.this_object, scope);
+
+        parent.addSymbol(scope.this_object);
+
+        ready.resolve();
+      });
     }
   };
-})
+}])
+
 
 .directive("polyLine", function ($q) {
   return {
@@ -763,115 +904,7 @@ angular.module("teamdev.esri", [])
     }
   };
 })
-.directive("point", function ($q) {
-  function renderpoint(scope, layer) {
-    var ready = $q.defer();
-    scope.isObjectReady = ready.promise;
-    require(["esri/geometry/Point", "esri/Graphic", "esri/SpatialReference", "esri/geometry/support/webMercatorUtils"], function (Point, Graphic, SpatialReference, webMercatorUtils) {
 
-      if (scope.json)
-        scope.this_point = new Point(scope.json);
-      else if (scope.spatialReference)
-        scope.this_point = new Point(scope.longitude, scope.latitude, new SpatialReference({ wkid: scope.spatialReference }));
-      else
-        scope.this_point = new Point(scope.longitude, scope.latitude);
-
-      if (scope.this_point.spatialReference.wkid == "4326")
-        scope.this_point = webMercatorUtils.geographicToWebMercator(scope.this_point);
-
-      if (typeof (scope.geometry) !== "undefined")
-        scope.geometry = scope.this_point;
-
-      if (scope.symbol) {
-        scope.graphic = new Graphic(scope.this_point, scope.symbol);
-        layer.add(scope.graphic);
-      }
-      else {
-        scope.graphic = new Graphic(scope.this_point);
-        layer.add(scope.graphic);
-      }
-
-      if (scope.extra) scope.graphic.extra = scope.extra;
-
-      ready.resolve();
-    });
-  }
-
-  function redrawpoint(scope, layer) {
-    require(["esri/geometry/Point", "esri/Graphic", "esri/geometry/SpatialReference", "esri/geometry/webMercatorUtils"], function (Point, Graphic, SpatialReference, webMercatorUtils) {
-      if (scope.graphic) {
-        var prevgraphic = scope.graphic;
-        if (prevgraphic._layer && prevgraphic._layer.graphics && prevgraphic._layer.graphics.length > 0) {
-          var i = prevgraphic._layer.graphics.indexOf(prevgraphic);
-          prevgraphic._layer.graphics.splice(i, 1);
-        }
-        layer.remove(prevgraphic);
-        prevgraphic.hide();
-        if (scope.symbol)
-          scope.graphic = new Graphic(scope.this_point, scope.symbol);
-        else
-          scope.graphic = new Graphic(scope.this_point);
-        layer.add(scope.graphic);
-        scope.graphic.draw();
-
-      }
-    });
-  }
-
-  return {
-    restrict: "E",
-    require: ["?^graphicsLayer", "?^featureLayer"],
-    scope: {
-      spatialReference: "@",
-      latitude: "=",
-      longitude: "=",
-      json: "=",
-      extra: "=",
-      geometry: "="
-    },
-    link: {
-      pre: function (scope, element, attrs, layers) {
-        var layer = layers[0] || layers[1];
-        renderpoint(scope, layer);
-        scope.__layer = layer;
-        scope.$on("$destroy", function () { scope.isObjectReady.then(function () { layer.remove(scope.graphic); }) });
-        scope.$watch("latitude", function (n, o) {
-          if (scope.this_point && n != o) {
-            scope.this_point.setY(n);
-            redrawpoint(scope, layer);
-            if (typeof (scope.geometry) !== "undefined")
-              scope.geometry = scope.this_point;
-
-          }
-        });
-        scope.$watch("longitude", function (n, o) {
-          if (scope.this_point && n != o) {
-            scope.this_point.setX(n);
-            redrawpoint(scope, layer);
-            if (typeof (scope.geometry) !== "undefined")
-              scope.geometry = scope.this_point;
-          }
-        });
-      }
-      /*,
-      post: function (scope, element, attrs, layers)
-      {
-        var layer = layers[0] || layers[1];
-       renderpoint(scope, layer);
-      }
-      */
-    },
-    controller: function ($scope) {
-      this.setSymbol = function (val) {
-        $scope.symbol = val;
-        $scope.isObjectReady.then(function () {
-          $scope.graphic.setSymbol(val);
-          $scope.graphic.draw();
-        });
-      };
-    }
-  };
-})
 .directive("circle", function ($q) {
   function renderpoint(scope, layer) {
     var ready = $q.defer();
@@ -948,38 +981,7 @@ angular.module("teamdev.esri", [])
   };
 })
 
-.directive("pictureMarkerSymbol", function ($q) {
-  return {
-    restrict: "EA",
-    scope: {
-      symbolUrl: "@"
-    },
-    require: ["?^valueInfo", "^?uniqueValueRenderer", "?point", "?^point", "?^graphicsLayer", "?^featureLayer"],
-    link: function (scope, element, attr, parents) {
-      var ready = $q.defer();
-      scope.isObjectReady = ready.promise;
-      require(["esri/symbols/PictureMarkerSymbol"], function (PictureMarkerSymbol) {
-        var pSymbol = new PictureMarkerSymbol(attr.symbolUrl || attr.pictureMarkerSymbol, attr.symbolWidth, attr.symbolHeight);
-        if (attr.symbolOffsetX || attr.symbolOffsetY)
-          pSymbol.setOffset(attr.symbolOffsetX ? attr.symbolOffsetX : 0, attr.symbolOffsetY ? attr.symbolOffsetY : 0)
-        scope.this_symbol = pSymbol;
-        ready.resolve();
-        scope.ctrl = (parents[0] || parents[1] || parents[2] || parents[3] || parents[4] || parents[5]);
-        if (scope.ctrl) scope.ctrl.setSymbol(scope.this_symbol);
 
-        if (scope.symbolUrl) scope.$watch("symbolUrl", function (n, o) {
-          if (scope.symbolUrl && scope.ctrl && n !== o) {
-            var p2Symbol = new PictureMarkerSymbol(scope.symbolUrl, attr.symbolWidth, attr.symbolHeight);
-            if (attr.symbolOffsetX || attr.symbolOffsetY)
-              p2Symbol.setOffset(attr.symbolOffsetX ? attr.symbolOffsetX : 0, attr.symbolOffsetY ? attr.symbolOffsetY : 0)
-            scope.this_symbol = p2Symbol;
-            scope.ctrl.setSymbol(scope.this_symbol);
-          }
-        });
-      });
-    }
-  };
-})
 .directive("simpleLineSymbol", function ($q) {
   return {
     restrict: "EA",
