@@ -1,7 +1,7 @@
 ﻿/* global O */
 /* global angular */
-angular.module("MapApp", ["__td_registry.esri"]).controller("defaultController", function () { });
-angular.module("__td_registry.esri", [])
+angular.module("MapApp", ["esri.arcgis.js4"]).controller("defaultController", function () { });
+angular.module("esri.arcgis.js4", [])
 
 /// ---------------------------------------------------------------------------------
 /// Helper object to bing dojo-properties to angularjs' scope
